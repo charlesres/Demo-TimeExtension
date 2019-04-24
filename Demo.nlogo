@@ -1,14 +1,8 @@
 extensions [ time ]
 
-globals [ ts time-obj]
+globals [ ts time-obj ]
 
-;; An event periodic
-
-to turtles-hatch
-  if ticks mod 5 = 0 [ crt 10 ]
-  if ticks mod 35 = 0 [ ask turtles [ if random 100 > 50 [ die ] ] ]
-  tick
-end
+;; An event periodic and time oriented
 
 to day-5
   time:go-until 5
@@ -22,25 +16,28 @@ to day-100
   time:go-until 100
 end
 
+; configuring the schedule
+
 to setup-anchor
   ca reset-ticks
   set time-obj (time:create "2000-01-01 00")
   set time-obj time:anchor-to-ticks time-obj 1 "day"
-  time:anchor-schedule (time:create "2000-01-01 00") 1 "day"
-  plot-pen-down
-  time:schedule-event "observer" [ [] -> crt 10 [ fd 1 ] ] 5
+
+  time:anchor-schedule (time:create "2000-01-01 00") 1 "day" ; anchor the date and determine how increments are handled in time:go
+  time:schedule-event "observer" [ [] -> crt 10 [ fd 10 ] ] 5 ; schedule creating the turtles at the 5th tick
+  time:schedule-repeating-event "observer" [ [] -> tick if random 100 < 20 [ crt 1 [ fd 10 ] ] ] (time:create "2000-01-01 00:00:00") 1 ; schedule a repeating event with ticks for the plot
 end
 
 to setup-record
-  set ts time:ts-create [ "no. turtles" ]
-  time:schedule-repeating-event-with-period "observer"
+  set ts time:ts-create [ "no. turtles" ] ; configure the records
+
+  time:schedule-repeating-event-with-period "observer" ; store the number of turtles
     [ [] -> print time-obj time:ts-add-row ts (sentence time-obj (count turtles)) ]
     (time:create "2000-01-10 00") 1 "day"
 end
 
 to schedule-more
-  time:schedule-event turtles [ [] -> fd 1 ] (time:create "2000-02-01 00:00:00")
-  time:schedule-event turtles [ [] -> fd 1 ] (time:create "2000-02-01 00:00:00.000")
+  time:schedule-repeating-event turtles [ [] -> fd 1 ] (time:create "2000-01-01 00:00:00") 1
   time:schedule-event "observer" [ [] -> ask turtles [ if random 100 < 50 [ die ] ] ] (time:create "2000-02-07 00:00:00.000")
 end
 @#$#@#$#@
@@ -99,6 +96,84 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "plot count turtles"
+
+BUTTON
+14
+260
+132
+294
+NIL
+setup-anchor
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+16
+300
+131
+334
+NIL
+setup-record
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+TEXTBOX
+44
+359
+160
+403
+Global Objects\n- ts\n- time-obj
+11
+0.0
+1
+
+BUTTON
+704
+44
+860
+78
+add-walking-events
+schedule-more
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+706
+90
+792
+124
+NIL
+day-100
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
