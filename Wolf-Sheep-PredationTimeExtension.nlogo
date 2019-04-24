@@ -8,7 +8,7 @@ patches-own [ countdown ]
 
 to setup
   clear-all
-  ifelse netlogo-web? [set max-sheep 10000] [set max-sheep 30000]
+  ifelse netlogo-web? [set max-sheep 10000] [ set max-sheep 30000]
 
   ; Check model-version switch
   ; if we're not modeling grass, then the sheep don't need to eat to survive
@@ -48,12 +48,20 @@ to setup
   setup-time
 end
 
+to day-200
+  time:go-until (time:create "2000-07-20 00")
+end
+
+to day-300
+  time:go-until 300
+end
+
 to setup-time
-  set current-time time:anchor-to-ticks (time:create "2000-01-01 00:00:00.000") 2 "day"
+  set current-time time:anchor-to-ticks (time:create "2000-01-01 00:00:00.000") 1 "day"
   time:anchor-schedule current-time 1 "day"
   set ts-records time:ts-create [ "mean-energy" "no. wolves" "no. sheep" ]
-  time:schedule-repeating-event-with-period "observer" [ [] -> go print current-time time:ts-add-row ts-records (sentence current-time (mean [energy] of turtles) (count wolves) (count sheep)) ] current-time 1 "day"
-  time:schedule-repeating-event-with-period "observer" [ [] -> tick ] current-time 1 "day"
+  time:schedule-repeating-event-with-period "observer"
+    [ [] -> tick go print current-time time:ts-add-row ts-records (sentence current-time (mean [energy] of turtles) (count wolves) (count sheep)) ] current-time 1 "day"
   ;time:schedule-event turtles [ [] -> if random 100 < 50 [ die ] ] (time:create "2000-02-15 00:00:00.000")
   ;time:schedule-repeating-event-with-period turtles [ [] -> if random 100 < 50 [ die ] ] (time:create "2000-02-15 00:00:00.000") 21 "day"
 end
@@ -81,7 +89,7 @@ to go
   ]
   if model-version = "sheep-wolves-grass" [ ask patches [ grow-grass ] ]
   ; set grass count patches with [pcolor = green]
-  tick
+  ;tick
   display-labels
 end
 
@@ -123,13 +131,13 @@ end
 
 to death  ; turtle procedure (i.e. both wolf nd sheep procedure)
   ; when energy dips below zero, die
-  if energy < 0 [ die ]
+  if energy < 1 [ die ]
 end
 
 to grow-grass  ; patch procedure
   ; countdown on brown patches: if reach 0, grow some grass
   if pcolor = brown [
-    ifelse countdown <= 0
+    ifelse countdown != 0
       [ set pcolor green
         set countdown grass-regrowth-time ]
       [ set countdown countdown - 1 ]
@@ -207,7 +215,7 @@ sheep-gain-from-food
 sheep-gain-from-food
 0.0
 50.0
-10.0
+13.0
 1.0
 1
 NIL
@@ -222,7 +230,7 @@ sheep-reproduce
 sheep-reproduce
 1.0
 20.0
-4.0
+5.0
 1.0
 1
 %
@@ -289,9 +297,9 @@ NIL
 HORIZONTAL
 
 BUTTON
-40
+15
 140
-109
+84
 173
 setup
 setup
@@ -306,9 +314,9 @@ NIL
 1
 
 BUTTON
-115
+85
 140
-190
+160
 173
 go
 go
@@ -343,10 +351,10 @@ PENS
 "grass / 4" 1.0 0 -10899396 true "" "if model-version = \"sheep-wolves-grass\" [ plot count grass / 4 ]"
 
 MONITOR
-41
-308
-111
-353
+15
+310
+85
+355
 sheep
 count sheep
 3
@@ -354,10 +362,10 @@ count sheep
 11
 
 MONITOR
-115
-308
-185
-353
+89
+310
+159
+355
 wolves
 count wolves
 3
@@ -365,10 +373,10 @@ count wolves
 11
 
 MONITOR
-191
-308
-256
-353
+165
+310
+230
+355
 grass
 count grass / 4
 0
@@ -416,6 +424,51 @@ model-version
 "sheep-wolves" "sheep-wolves-grass"
 0
 
+MONITOR
+235
+310
+335
+355
+current-time
+time:show current-time \"MM-dd-YYYY\"
+17
+1
+11
+
+BUTTON
+160
+140
+275
+173
+Day: 07-20-2000
+day-200
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+275
+140
+357
+173
+NIL
+day-300
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
 @#$#@#$#@
 ## WHAT IS IT?
 
@@ -427,9 +480,9 @@ There are two main variations to this model.
 
 In the first variation, the "sheep-wolves" version, wolves and sheep wander randomly around the landscape, while the wolves look for sheep to prey on. Each step costs the wolves energy, and they must eat sheep in order to replenish their energy - when they run out of energy they die. To allow the population to continue, each wolf or sheep has a fixed probability of reproducing at each time step. In this variation, we model the grass as "infinite" so that sheep always have enough to eat, and we don't explicitly model the eating or growing of grass. As such, sheep don't either gain or lose energy by eating or moving. This variation produces interesting population dynamics, but is ultimately unstable. This variation of the model is particularly well-suited to interacting species in a rich nutrient environment, such as two strains of bacteria in a petri dish (Gause, 1934).
 
-The second variation, the "sheep-wolves-grass" version explictly models grass (green) in addition to wolves and sheep. The behavior of the wolves is identical to the first variation, however this time the sheep must eat grass in order to maintain their energy - when they run out of energy they die. Once grass is eaten it will only regrow after a fixed amount of time. This variation is more complex than the first, but it is generally stable. It is a closer match to the classic Lotka Volterra population oscillation models. The classic LV models though assume the populations can take on real values, but in small populations these models underestimate extinctions and agent-based models such as the ones here, provide more realistic results. (See Wilensky & Rand, 2015; chapter 4).
+The second variation, the "sheep-wolves-grass" version explictly models grass (green) in addition to wolves and sheep. The behavior of the wolves is identical to the first variation, however this time the sheep must eat grass in order to maintain their energy - when they run out of energy they die. Once grass is eaten it will only regrow after a fixed amount of time. This variation is more complex than the first, but it is generally stable. It is a closer match to the classic Lotka Volterra population oscillation models. The classic LV models though assume the populations can take on real values, but in small populations these models underestimate extinctions and agent-based models such as the ones here, provide more realistic results. (See Wilensky &amp; Rand, 2015; chapter 4).
 
-The construction of this model is described in two papers by Wilensky & Reisman (1998; 2006) referenced below.
+The construction of this model is described in two papers by Wilensky &amp; Reisman (1998; 2006) referenced below.
 
 ## HOW TO USE IT
 
@@ -499,17 +552,17 @@ Look at Rabbits Grass Weeds for another model of interacting populations with di
 
 ## CREDITS AND REFERENCES
 
-Wilensky, U. & Reisman, K. (1998). Connected Science: Learning Biology through Constructing and Testing Computational Theories -- an Embodied Modeling Approach. International Journal of Complex Systems, M. 234, pp. 1 - 12. (The Wolf-Sheep-Predation model is a slightly extended version of the model described in the paper.)
+Wilensky, U. &amp; Reisman, K. (1998). Connected Science: Learning Biology through Constructing and Testing Computational Theories -- an Embodied Modeling Approach. International Journal of Complex Systems, M. 234, pp. 1 - 12. (The Wolf-Sheep-Predation model is a slightly extended version of the model described in the paper.)
 
-Wilensky, U. & Reisman, K. (2006). Thinking like a Wolf, a Sheep or a Firefly: Learning Biology through Constructing and Testing Computational Theories -- an Embodied Modeling Approach. Cognition & Instruction, 24(2), pp. 171-209. http://ccl.northwestern.edu/papers/wolfsheep.pdf .
+Wilensky, U. &amp; Reisman, K. (2006). Thinking like a Wolf, a Sheep or a Firefly: Learning Biology through Constructing and Testing Computational Theories -- an Embodied Modeling Approach. Cognition &amp; Instruction, 24(2), pp. 171-209. http://ccl.northwestern.edu/papers/wolfsheep.pdf .
 
-Wilensky, U., & Rand, W. (2015). An introduction to agent-based modeling: Modeling natural, social and engineered complex systems with NetLogo. Cambridge, MA: MIT Press.
+Wilensky, U., &amp; Rand, W. (2015). An introduction to agent-based modeling: Modeling natural, social and engineered complex systems with NetLogo. Cambridge, MA: MIT Press.
 
 Lotka, A. J. (1925). Elements of physical biology. New York: Dover.
 
 Volterra, V. (1926, October 16). Fluctuations in the abundance of a species considered mathematically. Nature, 118, 558–560.
 
-Gause, G. F. (1934). The struggle for existence. Baltimore: Williams & Wilkins.
+Gause, G. F. (1934). The struggle for existence. Baltimore: Williams &amp; Wilkins.
 
 ## HOW TO CITE
 
@@ -535,9 +588,9 @@ Commercial licenses are also available. To inquire about commercial licenses, pl
 
 This model was created as part of the project: CONNECTED MATHEMATICS: MAKING SENSE OF COMPLEX PHENOMENA THROUGH BUILDING OBJECT-BASED PARALLEL MODELS (OBPML).  The project gratefully acknowledges the support of the National Science Foundation (Applications of Advanced Technologies Program) -- grant numbers RED #9552950 and REC #9632612.
 
-This model was converted to NetLogo as part of the projects: PARTICIPATORY SIMULATIONS: NETWORK-BASED DESIGN FOR SYSTEMS LEARNING IN CLASSROOMS and/or INTEGRATED SIMULATION AND MODELING ENVIRONMENT. The project gratefully acknowledges the support of the National Science Foundation (REPP & ROLE programs) -- grant numbers REC #9814682 and REC-0126227. Converted from StarLogoT to NetLogo, 2000.
+This model was converted to NetLogo as part of the projects: PARTICIPATORY SIMULATIONS: NETWORK-BASED DESIGN FOR SYSTEMS LEARNING IN CLASSROOMS and/or INTEGRATED SIMULATION AND MODELING ENVIRONMENT. The project gratefully acknowledges the support of the National Science Foundation (REPP &amp; ROLE programs) -- grant numbers REC #9814682 and REC-0126227. Converted from StarLogoT to NetLogo, 2000.
 
-<!-- 1997 2000 -->
+&lt;!-- 1997 2000 --&gt;
 @#$#@#$#@
 default
 true

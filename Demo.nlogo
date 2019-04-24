@@ -1,150 +1,47 @@
-;; Decline and rise of civilization
-;;
-;; Several Options:
-;;  - A lot of feeders (drops some garbage when a food is obtained)
-;;  - A lot of hunters (drops some garbage when a food is dropped off)
-;;  - A lot of healers (drops some garbage when a healing is administered)
-;;  - A lot of cleaners (never drops garbage and cleans it when close enough, but uses energy)
-;;
-;; The point of this model is to have each colony have specialized members that help each other
-;; It demonstrate the strength and weaknesses of a specialized republics with a variety of priorities
-;; Since each community is competing for survival it is meant to show how various strategies can
-;; lead to a benefically or disastrious results. The user, also, has control of the resource
-;;
-;; There is one colony living. Their distance is such that it would be rare
-;; to come in contact with the other. Each colony repels the other
-;;
-;; Job specialization in terms of ants
-;;
-;; - Feeder ants
-;; - Hunter ants
-;; - Healer ants
-;; - Cleaner ants
-;;
-;; How does the model work?
-;;   - The user will be able to determine the number of ants, especially the number of healers,
-;;   hunters, feeders, and cleaners. This would allow interesting investigations into how production
-;;   can be influenced by their environment. Food will be randomly generated and will reflect seasons
-;;   I need to show a correlation with the behavior and how the outcome should appear
-;;
-;; Utilizing rewinding in the NetLogo model
-;;
-;; This is to make sure that the model did not mess up with displaying the correct information
-;;   - So in this case, it should have two modes. Run the events and reset & run replay
-;;
-;; If there aren't enough hunter ants, the population falls
-;; If there aren't enough healer ants, the population falls
-;; If there aren't enough feeder ants, the population falls
-;; If there aren't enough cleaner ants, the population can't have promotions
-;;
-;; For each member of the colony, they will do the following:
-;;  1) Look around and determine their next move
-;;  2) Move to new location
-;;  3) Activate Power
-;;  4) Determine if out of energy
-;;
+extensions [ time ]
 
-extensions [time table]
-globals [
-  anchored-time
-  ts
-]
+globals [ ts time-obj]
 
-;; The rise and decline of civilization with worker distribution
+;; An event periodic
 
-turtles-own [ energy cooldown ]
-breed [ cleaners cleaner ]
-breed [ healers healer ]
-breed [ hunters hunter ]
-breed [ toxins toxin ]
-
-;; Initializing the environment with each profession
-
-to setup
-  ca
-  reset-ticks
-  setup-anchor
+to turtles-hatch
+  if ticks mod 5 = 0 [ crt 10 ]
+  if ticks mod 35 = 0 [ ask turtles [ if random 100 > 50 [ die ] ] ]
+  tick
 end
 
-to setup-environment
-  create-cleaners number-of-cleaners [ set energy 100 set color green ]
-  create-healers  number-of-healers  [ set energy 100 set color green set shape "circle" ]
+to day-5
+  time:go-until 5
 end
 
-to go
-  time:go-until 20
-  time:ts-write ts "/home/charly/time-series-output3.csv"
-  print "Terminated Program"
+to day-10
+  time:go-until 10
 end
 
-to healer-walk
-  fd 1 right random 180 left random 180
-  let direction one-of cleaners in-radius 4
-  if direction != nobody [ face one-of cleaners in-radius 4 ]
-end
-
-to walk
-  fd 1 right random 180 left random 180
-end
-
-to schedule-event
-  set ts time:ts-create [ "number of healers" "number of cleaners" "total" ]
-  time:schedule-repeating-event-with-period "observer" [ [] -> create-toxins 1 [ setxy random-xcor random-ycor set shape "square" set color red ] ] (time:create "2000-01-02 00:00:00.000") 5 "day"
-  time:schedule-event healers  [ [] -> walk healer-schedule true ] (time:create "2000-01-01 00:00:00.000")
-  time:schedule-event cleaners [ [] -> walk cleaner-schedule true ] (time:create "2000-01-01 00:00:00.000")
-  time:schedule-repeating-event-with-period toxins [ [] -> ask turtles with [energy > 0 ] in-radius 4 [ set energy energy - 5 ] ] (time:create "2000-01-02 00:00:00.000") 1 "day"
-  time:schedule-repeating-event-with-period "observer" [ [] -> print anchored-time time:ts-add-row ts (sentence anchored-time (count healers) (count cleaners) (count turtles)) ] (time:create "2000-01-02 00:00:00.000") 1 "day"
+to day-100
+  time:go-until 100
 end
 
 to setup-anchor
-  setup-environment
-  set ts time:ts-create [ "energy" "cooldown" "number-of-bodies" ]
-  let time time:create "2000-01-01 00:00:00.000"
-  set anchored-time time:anchor-to-ticks time 1 "day"
-  time:anchor-schedule anchored-time 1 "day"
-  schedule-event
+  ca reset-ticks
+  set time-obj (time:create "2000-01-01 00")
+  set time-obj time:anchor-to-ticks time-obj 1 "day"
+  time:anchor-schedule (time:create "2000-01-01 00") 1 "day"
+  plot-pen-down
+  time:schedule-event "observer" [ [] -> crt 10 [ fd 1 ] ] 5
 end
 
-to heal-health
-  ask turtles in-radius 5 [
-    set energy energy + 20
-    if energy > 100 [ set energy 100 ]
-  ]
+to setup-record
+  set ts time:ts-create [ "no. turtles" ]
+  time:schedule-repeating-event-with-period "observer"
+    [ [] -> print time-obj time:ts-add-row ts (sentence time-obj (count turtles)) ]
+    (time:create "2000-01-10 00") 1 "day"
 end
 
-to destroy-toxins
-  ask toxins in-radius 8 [
-    die
-  ]
-end
-
-to reduce-cooldown
-  ask turtles in-radius 5 [
-    set cooldown cooldown + 2
-    if cooldown > 10 [ set cooldown 10 ]
-  ]
-end
-
-to update-state
-  (ifelse energy > 60 [ set color green ]
-    energy > 30 [ set color yellow ]
-    energy > 10 [ set color red ]
-                [ set color gray ])
-  if energy <= 0 [ die ]
-end
-
-; Scheduling turtle actions and abilities
-
-to healer-schedule [ default? ]
-  let default-cooldown ifelse-value default? [ random 16 ] [ 20 - cooldown ]
-  print anchored-time
-  time:schedule-event self [ [] -> healer-walk update-state heal-health healer-schedule false ] time:plus anchored-time default-cooldown "day"
-end
-
-to cleaner-schedule [ default? ]
-  let default-cooldown ifelse-value default? [ random 16 ] [ 20 - cooldown ]
-  print anchored-time
-  time:schedule-event self [ [] -> walk update-state destroy-toxins cleaner-schedule false ] time:plus anchored-time default-cooldown "day"
+to schedule-more
+  time:schedule-event turtles [ [] -> fd 1 ] (time:create "2000-02-01 00:00:00")
+  time:schedule-event turtles [ [] -> fd 1 ] (time:create "2000-02-01 00:00:00.000")
+  time:schedule-event "observer" [ [] -> ask turtles [ if random 100 < 50 [ die ] ] ] (time:create "2000-02-07 00:00:00.000")
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -174,44 +71,71 @@ GRAPHICS-WINDOW
 ticks
 30.0
 
-SLIDER
-7
-131
-203
-164
-number-of-healers
-number-of-healers
-0
-20
-9.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-7
-165
-204
+MONITOR
+10
+21
 198
-number-of-cleaners
-number-of-cleaners
-0
-20
-9.0
+66
+Current-time
+time:show time-obj \"MM/dd\"
+17
 1
-1
+11
+
+PLOT
+9
+90
+199
+240
+Number of Turtles
 NIL
-HORIZONTAL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot count turtles"
 
 @#$#@#$#@
 ## WHAT IS IT?
 
-Model represents a colony with specialized members that collaborate over a period of time. It demonstrates the strength and weaknesses of a specialized republic with a variety of priorities. Since the population varies in the number of participants and specialists, it is meant to show how various strategies can lead to a benefically or disastrious result. Resources are important, but might require assistant from other ants.
+(a general understanding of what the model is trying to show or explain)
+
+## HOW IT WORKS
+
+(what rules the agents use to create the overall behavior of the model)
+
+## HOW TO USE IT
+
+(how to use the model, including a description of each of the items in the Interface tab)
+
+## THINGS TO NOTICE
+
+(suggested things for the user to notice while running the model)
+
+## THINGS TO TRY
+
+(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
+
+## EXTENDING THE MODEL
+
+(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
+
+## NETLOGO FEATURES
+
+(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
+
+## RELATED MODELS
+
+(models in the NetLogo Models Library and elsewhere which are of related interest)
 
 ## CREDITS AND REFERENCES
 
-Created 04/23/2019 Charly B. Resendiz
+(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
 @#$#@#$#@
 default
 true

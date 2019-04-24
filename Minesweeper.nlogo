@@ -1,39 +1,146 @@
-extensions [ time ]
+;;
+;; Several Options:
+;;  - A lot of healers (drops some garbage when a healing is administered)
+;;  - A lot of cleaners (never drops garbage and cleans it when close enough, but uses energy)
+;;
+;; The point of this model is to have each colony have specialized members that help each other
+;; It demonstrate the strength and weaknesses of a specialized republics with a variety of priorities
+;; Since each community is competing for survival it is meant to show how various strategies can
+;; lead to a benefically or disastrious results. The user, also, has control of the resource
+;;
+;; There is one colony living. Their distance is such that it would be rare
+;; to come in contact with the other. Each colony repels the other
+;;
+;; Job specialization in terms of ants
+;;
+;; - Feeder ants
+;; - Hunter ants
+;; - Healer ants
+;; - Cleaner ants
+;;
+;; How does the model work?
+;;   - The user will be able to determine the number of ants, especially the number of healers,
+;;   hunters, feeders, and cleaners. This would allow interesting investigations into how production
+;;   can be influenced by their environment. Food will be randomly generated and will reflect seasons
+;;   I need to show a correlation with the behavior and how the outcome should appear
+;;
+;; Utilizing rewinding in the NetLogo model
+;;
+;; This is to make sure that the model did not mess up with displaying the correct information
+;;   - So in this case, it should have two modes. Run the events and reset &amp; run replay
+;;
+;; If there aren't enough hunter ants, the population falls
+;; If there aren't enough healer ants, the population falls
+;; If there aren't enough feeder ants, the population falls
+;; If there aren't enough cleaner ants, the population can't have promotions
+;;
+;; For each member of the colony, they will do the following:
+;;  1) Look around and determine their next move
+;;  2) Move to new location
+;;  3) Activate Power
+;;  4) Determine if out of energy
+;;
 
-globals [ current-time ]
+extensions [time table]
+globals [
+  anchored-time
+  ts
+]
+
+;; The rise and decline of civilization with worker distribution
+
+turtles-own [ energy cooldown ]
+breed [ cleaners cleaner ]
+breed [ healers healer ]
+breed [ hunters hunter ]
+breed [ toxins toxin ]
+
+;; Initializing the environment with each profession
 
 to setup
   ca
   reset-ticks
-  crt 10 [ setxy random-xcor random-ycor set size 2 ]
-
-  ; anchor the scheduler and ticks [ Daily ]
-  set current-time time:anchor-to-ticks (time:create "2000-01-01 00:00:00.000") 1 "day"
-  time:anchor-schedule (time:create "2000-01-01 00:00:00.000") 1 "day"
-
-  ; schedule turtles to walk everyday [ Daily ]
-  time:schedule-repeating-event-with-period turtles
-    [ [] -> print xcor right random 180 left random 180 fd 1 ] (time:create "2000-01-02 00:00:00.000") 1 "day"
-
-  ; schedule patches to return to black every 3 days [ 3 days ]
-  time:schedule-repeating-event-with-period patches
-    [ [] -> set pcolor black ] (time:create "2000-01-02 00:00:00.000") 3 "day"
-
-  ; schedule turtles to change the patches to green every 10 days [ 10 days ]
-  time:schedule-repeating-event-with-period turtles
-    [ [] -> ask patches in-radius 3 [ set pcolor green ] ] (time:create "2000-01-02 00:00:00.000") 10 "day"
+  setup-anchor
 end
 
-to day-100
-  time:go-until 100
+to setup-environment
+  create-cleaners number-of-cleaners [ set energy 100 set color green ]
+  create-healers  number-of-healers  [ set energy 100 set color green set shape "circle" ]
 end
 
-to day-1000
+to go
   time:go-until 1000
+  print "Terminated Program"
 end
 
-to day-3000
-  time:go-until 3000
+to healer-walk
+  fd 1 right random 180 left random 180
+  let direction one-of cleaners in-radius 4
+  if direction != nobody [ face one-of cleaners in-radius 4 ]
+end
+
+to walk
+  fd 1 right random 180 left random 180
+end
+
+to schedule-event
+  set ts time:ts-create [ "number of healers" "number of cleaners" "total" ]
+  time:schedule-repeating-event-with-period "observer" [ [] -> create-toxins 1 [ setxy random-xcor random-ycor set shape "square" set color red ] ] (time:create "2000-01-02 00:00:00.000") 5 "day"
+  time:schedule-event healers  [ [] -> walk healer-schedule true ] (time:create "2000-01-01 00:00:00.000")
+  time:schedule-event cleaners [ [] -> walk cleaner-schedule true ] (time:create "2000-01-01 00:00:00.000")
+  time:schedule-repeating-event-with-period toxins [ [] -> ask turtles with [energy > 0 ] in-radius 4 [ set energy energy - 5 ] ] (time:create "2000-01-02 00:00:00.000") 1 "day"
+  time:schedule-repeating-event-with-period "observer" [ [] -> print anchored-time time:ts-add-row ts (sentence anchored-time (count healers) (count cleaners) (count turtles)) ] (time:create "2000-01-02 00:00:00.000") 1 "day"
+end
+
+to setup-anchor
+  setup-environment
+  set ts time:ts-create [ "energy" "cooldown" "number-of-bodies" ]
+  let time time:create "2000-01-01 00:00:00.000"
+  set anchored-time time:anchor-to-ticks time 1 "day"
+  time:anchor-schedule anchored-time 1 "day"
+  schedule-event
+end
+
+to heal-health
+  ask turtles in-radius 5 [
+    set energy energy + 20
+    if energy > 100 [ set energy 100 ]
+  ]
+end
+
+to destroy-toxins
+  ask toxins in-radius 8 [
+    die
+  ]
+end
+
+to reduce-cooldown
+  ask turtles in-radius 5 [
+    set cooldown cooldown + 2
+    if cooldown > 10 [ set cooldown 10 ]
+  ]
+end
+
+to update-state
+  (ifelse energy > 60 [ set color green ]
+    energy > 30 [ set color yellow ]
+    energy > 10 [ set color red ]
+                [ set color gray ])
+  if energy <= 0 [ die ]
+end
+
+; Scheduling turtle actions and abilities
+
+to healer-schedule [ default? ]
+  let default-cooldown ifelse-value default? [ random 16 ] [ 20 - cooldown ]
+  print anchored-time
+  time:schedule-event self [ [] -> healer-walk update-state heal-health healer-schedule false ] time:plus anchored-time default-cooldown "day"
+end
+
+to cleaner-schedule [ default? ]
+  let default-cooldown ifelse-value default? [ random 16 ] [ 20 - cooldown ]
+  print anchored-time
+  time:schedule-event self [ [] -> walk update-state destroy-toxins cleaner-schedule false ] time:plus anchored-time default-cooldown "day"
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -63,45 +170,41 @@ GRAPHICS-WINDOW
 ticks
 30.0
 
-BUTTON
-62
-49
-155
-82
-NIL
-day-1000
-NIL
+SLIDER
+7
+131
+203
+164
+number-of-healers
+number-of-healers
+0
+20
+9.0
 1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
 1
+NIL
+HORIZONTAL
+
+SLIDER
+7
+165
+204
+198
+number-of-cleaners
+number-of-cleaners
+0
+20
+9.0
+1
+1
+NIL
+HORIZONTAL
 
 BUTTON
-63
-91
-156
-124
-NIL
-day-3000
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-73
-139
-140
-173
+45
+32
+112
+66
 NIL
 setup
 NIL
@@ -114,34 +217,13 @@ NIL
 NIL
 1
 
-MONITOR
-54
-205
-166
-250
-Current Date
-time:show current-time \"MM/dd\"
-17
-1
-11
-
-TEXTBOX
-44
-276
-194
-332
-Events can be scheduled at different periods\n(Execute with slower ticks)\n(Run some ticks)
-11
-0.0
-1
-
 BUTTON
-63
-10
-154
-43
+126
+32
+190
+66
 NIL
-day-100
+go
 NIL
 1
 T
@@ -155,9 +237,11 @@ NIL
 @#$#@#$#@
 ## WHAT IS IT?
 
-The model reflects how the time extension can schedule a variety of events without the requirement of advancing the tick counter.
+Model represents a colony with specialized members that collaborate over a period of time. It demonstrates the strength and weaknesses of a specialized republic with a variety of priorities. Since the population varies in the number of participants and specialists, it is meant to show how various strategies can lead to a benefically or disastrious result. Resources are important, but might require assistant from other ants.
 
 ## CREDITS AND REFERENCES
+
+Created 04/23/2019 Charly B. Resendiz
 @#$#@#$#@
 default
 true
